@@ -10,8 +10,8 @@ class App extends React.Component {
   state = {
     characters: [],
     timer: 1,
-    isRunning: true,
-    displayedCharacter: 'a',
+    isRunning: false,
+    displayedCharacter: '',
     isTicking: false,
   }
 
