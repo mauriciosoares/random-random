@@ -7,12 +7,22 @@ function randomizeArray(arr) {
 
 class App extends React.Component {
   interval = null
-  state = {
-    characters: [],
-    timer: 1,
-    isRunning: false,
-    displayedCharacter: '',
-    isTicking: false,
+  constructor() {
+    super()
+    let state = {
+      characters: [],
+      timer: 1,
+      isRunning: false,
+      displayedCharacter: '',
+      isTicking: false,
+    }
+
+    const cache = window.localStorage.getItem('cache')
+    if (cache) {
+      state = JSON.parse(cache)
+    }
+
+    this.state = state
   }
 
   componentDidMount() {
@@ -33,8 +43,8 @@ class App extends React.Component {
     }
   }
 
-  updateCharacter = () => {
-    const { characters, displayedCharacter } = this.state
+  updateCharacter = async () => {
+    const { characters, displayedCharacter, timer } = this.state
     let randomCharacter = randomizeArray(characters);
 
     if (characters.length > 1) {
@@ -48,6 +58,12 @@ class App extends React.Component {
       isTicking: true,
     })
 
+    setTimeout(() => {
+      const progressBar = document.getElementById('progress-bar')
+      progressBar.style.setProperty('transition', `${timer}s linear`)
+      progressBar.style.setProperty('width', `0`)
+    }, 30)
+
     window.setTimeout(() => this.setState({ isTicking: false, }), 100)
   }
 
@@ -55,12 +71,13 @@ class App extends React.Component {
     const { timer } = this.state
     this.setState({
       isRunning: true,
+    }, () => {
+      this.updateCharacter()
+      this.interval = window.setInterval(() => {
+        this.updateCharacter()
+      }, timer * 1000)
     })
 
-    this.updateCharacter()
-    this.interval = window.setInterval(() => {
-      this.updateCharacter()
-    }, timer * 1000)
   }
 
   stop = () => {
@@ -72,6 +89,7 @@ class App extends React.Component {
 
   render() {
     const { timer, isRunning, displayedCharacter, characters, isTicking } = this.state
+    const parsedCharacters = characters.join(', ')
 
     return (
       <div>
@@ -80,7 +98,8 @@ class App extends React.Component {
         {!isRunning &&
           <>
             <input
-              value={characters.join(', ')}
+              key={parsedCharacters}
+              defaultValue={parsedCharacters}
               onChange={(e) => {
                 this.setState({
                   characters: [...new Set(e.target.value.split(',').map(value => value.trim()).filter(Boolean))]
@@ -100,12 +119,12 @@ class App extends React.Component {
               className="interval input"
               placeholder="Interval in Seconds"
               type="number" />
-            <button className="button start" onClick={this.start} disabled={characters.length <= 1}>START</button>
+            <button className="button start" onClick={this.start} disabled={characters.length <= 1 || timer < 1}>START</button>
 
             <h2>Boilerplates</h2>
             <ul className="boilerplate">
               {boilerplates.map(item => (
-                <li onClick={() => this.setState({ characters: item.value })}>
+                <li key={item.name} onClick={() => this.setState({ characters: item.value })}>
                   {item.name}
                 </li>
               ))}
@@ -117,6 +136,13 @@ class App extends React.Component {
             <div className={`displayed-character ${isTicking ? 'tick' : ''}`}>
               {displayedCharacter}
             </div>
+
+              <div
+                key={displayedCharacter}
+                id="progress-bar"
+                className="progress-bar"
+                ref={(element) => {this.progressBar = element}} />
+
             <button className="button stop" onClick={this.stop}>STOP</button>
           </>
         }
