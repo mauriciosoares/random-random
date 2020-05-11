@@ -1,6 +1,7 @@
 {
   "name": "random-random",
   "version": "0.1.0",
+  "homepage": "https://mauriciosoares.github.io/random-random",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^4.2.4",
