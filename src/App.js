@@ -1,5 +1,9 @@
 import React from 'react';
 import boilerplates from './boilerplates'
+import NoSleep from 'nosleep.js'
+
+const noSleep = new NoSleep()
+console.log(noSleep)
 
 function randomizeArray(arr) {
   return arr[Math.floor(Math.random() * arr.length)]
@@ -69,6 +73,7 @@ class App extends React.Component {
 
   start = () => {
     const { timer } = this.state
+    noSleep.enable()
     this.setState({
       isRunning: true,
     }, () => {
@@ -82,6 +87,7 @@ class App extends React.Component {
 
   stop = () => {
     window.clearInterval(this.interval)
+    noSleep.disable()
     this.setState({
       isRunning: false,
     })
