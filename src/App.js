@@ -3,7 +3,12 @@ import boilerplates from './boilerplates'
 import NoSleep from 'nosleep.js'
 
 const noSleep = new NoSleep()
-console.log(noSleep)
+
+function formatTimer(ml) {
+  var minutes = Math.floor(ml / 60000);
+  var seconds = ((ml % 60000) / 1000).toFixed(0);
+  return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
+}
 
 function randomizeArray(arr) {
   return arr[Math.floor(Math.random() * arr.length)]
@@ -15,7 +20,10 @@ class App extends React.Component {
     super()
     let state = {
       characters: [],
-      timer: 1,
+      interval: 1,
+      minutes: 1,
+      seconds: 0,
+      timeout: 0,
       isRunning: false,
       displayedCharacter: '',
       isTicking: false,
@@ -38,17 +46,19 @@ class App extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    const { characters, timer } = this.state
+    const { characters, interval, minutes, seconds } = this.state
     if (
       prevState.characters !== characters ||
-      prevState.timer !== timer
+      prevState.interval !== interval ||
+      prevState.minutes !== minutes ||
+      prevState.seconds !== seconds
     ) {
       window.localStorage.setItem('cache', JSON.stringify(this.state))
     }
   }
 
   updateCharacter = async () => {
-    const { characters, displayedCharacter, timer } = this.state
+    const { characters, displayedCharacter, interval } = this.state
     let randomCharacter = randomizeArray(characters);
 
     if (characters.length > 1) {
@@ -64,7 +74,7 @@ class App extends React.Component {
 
     setTimeout(() => {
       const progressBar = document.getElementById('progress-bar')
-      progressBar.style.setProperty('transition', `${timer}s linear`)
+      progressBar.style.setProperty('transition', `${interval}s linear`)
       progressBar.style.setProperty('width', `0`)
     }, 30)
 
@@ -72,21 +82,39 @@ class App extends React.Component {
   }
 
   start = () => {
-    const { timer } = this.state
+    const { interval, minutes, seconds } = this.state
+    const timeoutMl = (minutes * 60 * 1000) + (seconds * 1000)
+    this.setState({
+      timeout: timeoutMl,
+    })
+
     noSleep.enable()
+
     this.setState({
       isRunning: true,
     }, () => {
       this.updateCharacter()
       this.interval = window.setInterval(() => {
         this.updateCharacter()
-      }, timer * 1000)
+      }, interval * 1000)
+
+      this.timeout = window.setInterval(() => {
+        const { timeout } = this.state
+        this.setState({
+          timeout: timeout - 1000,
+        })
+
+        if ((timeout - 1000) === 0) {
+          this.stop()
+        }
+      }, 1000)
     })
 
   }
 
   stop = () => {
     window.clearInterval(this.interval)
+    window.clearInterval(this.timeout)
     noSleep.disable()
     this.setState({
       isRunning: false,
@@ -94,7 +122,7 @@ class App extends React.Component {
   }
 
   render() {
-    const { timer, isRunning, displayedCharacter, characters, isTicking } = this.state
+    const { interval, isRunning, displayedCharacter, characters, isTicking, minutes, seconds, timeout } = this.state
     const parsedCharacters = characters.join(', ')
 
     return (
@@ -103,6 +131,7 @@ class App extends React.Component {
 
         {!isRunning &&
           <>
+            <label>Characters to Randomize</label>
             <input
               key={parsedCharacters}
               defaultValue={parsedCharacters}
@@ -111,21 +140,48 @@ class App extends React.Component {
                   characters: [...new Set(e.target.value.split(',').map(value => value.trim()).filter(Boolean))]
                 })
               }}
-              className="characters input"
-              placeholder="Characters to Randomize"
+              className="input"
               type="text" />
 
+            <label>Interval <i>(in seconds)</i></label>
             <input
-              defaultValue={timer}
+              defaultValue={interval}
               onChange={(e) => {
                 this.setState({
-                  timer: parseInt(e.target.value, 10) || 0,
+                  interval: parseInt(e.target.value, 10) || 0,
                 })
               }}
-              className="interval input"
+              className="input"
               placeholder="Interval in Seconds"
               type="number" />
-            <button className="button start" onClick={this.start} disabled={characters.length <= 1 || timer < 1}>START</button>
+
+            <div className="input-group">
+              <label style={{ width: '50%' }}>Minutes</label>
+              <label style={{ width: '50%' }}>Seconds</label>
+            </div>
+            <div className="input-group">
+              <input
+                defaultValue={minutes}
+                onChange={(e) => {
+                  this.setState({
+                    minutes: parseInt(e.target.value, 10) || 0,
+                  })
+                }}
+                className="input"
+                placeholder="Timer Minutes"
+                type="number" />
+              <input
+                defaultValue={seconds}
+                onChange={(e) => {
+                  this.setState({
+                    seconds: parseInt(e.target.value, 10) || 0,
+                  })
+                }}
+                className="input"
+                placeholder="Timer Seconds"
+                type="number" />
+            </div>
+            <button className="button start" onClick={this.start} disabled={characters.length <= 1 || interval < 1}>START</button>
 
             <h2>Boilerplates</h2>
             <ul className="boilerplate">
@@ -143,11 +199,16 @@ class App extends React.Component {
               {displayedCharacter}
             </div>
 
-              <div
-                key={displayedCharacter}
-                id="progress-bar"
-                className="progress-bar"
-                ref={(element) => {this.progressBar = element}} />
+            <div
+              key={displayedCharacter}
+              id="progress-bar"
+              className="progress-bar"
+              ref={(element) => { this.progressBar = element }} />
+
+
+            <div className="timeout">
+              {formatTimer(timeout)}
+            </div>
 
             <button className="button stop" onClick={this.stop}>STOP</button>
           </>
